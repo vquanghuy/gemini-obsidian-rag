@@ -82,9 +82,36 @@ LLM (Any)          search.py             Vector DB
 
 ### Installation
 
+1. **Create a virtual environment:**
+
+```bash
+python3 -m venv venv
+```
+
+2. **Activate the virtual environment:**
+
+```bash
+# On macOS/Linux:
+source venv/bin/activate
+
+# On Windows:
+venv\Scripts\activate
+```
+
+3. **Install dependencies:**
+
 ```bash
 pip install -r requirements.txt
 ```
+
+4. **Configure your environment:**
+
+```bash
+cp .env.example .env
+# Edit .env with your vault path and HuggingFace token
+```
+
+Get your HuggingFace token from: https://huggingface.co/settings/tokens
 
 ### Build the Index
 
@@ -93,12 +120,14 @@ python3 indexer.py --full
 ```
 
 This one-time operation:
-- Reads all `.md` files from your vault
+- Reads all `.md` files from your vault (with progress bar)
 - Chunks them into searchable segments
-- Generates embeddings using the local model
+- Generates embeddings using the local model (with progress bar)
 - Stores vectors in ChromaDB
 
 **Expected time**: 2-10 minutes for ~1,000 notes on Apple M1 Pro
+
+**Progress indication**: The indexer displays real-time progress bars for both file loading and embedding generation, so you can monitor the indexing process.
 
 ### Search Your Vault
 
@@ -144,43 +173,66 @@ Then summarize the results.
 
 ### Vault Path
 
-Edit `indexer.py` to point to your Obsidian vault:
+Create a `.env` file based on `.env.example`:
 
-```python
-VAULT_PATH = "/path/to/your/obsidian/vault"
+```bash
+cp .env.example .env
 ```
+
+Then edit `.env` and set your configuration:
+
+```bash
+# Path to your Obsidian vault
+VAULT_PATH=/path/to/your/obsidian/vault
+
+# Path to ChromaDB vector database
+DB_PATH=./chroma_db
+
+# HuggingFace API token (required for gated model)
+HF_TOKEN=hf_your_token_here
+```
+
+**Note**: The `google/embeddinggemma-300m` model is gated and requires a HuggingFace account. Get your token from: https://huggingface.co/settings/tokens
 
 ### Chunk Size & Overlap
 
-Adjust chunking parameters in `indexer.py`:
+Adjust chunking parameters in `config.py`:
 
 ```python
-chunk_size = 512      # tokens per chunk
-chunk_overlap = 50    # overlap between chunks
+CHUNK_SIZE = 512      # tokens per chunk
+CHUNK_OVERLAP = 50    # overlap between chunks
 ```
 
 ### Number of Results
 
-Modify `search.py` to control how many chunks are returned:
+Use the `--top-k` flag when searching to control how many chunks are returned:
+
+```bash
+python3 search.py "your query" --top-k 10
+```
+
+Or modify the default in `config.py`:
 
 ```python
-top_k = 5  # return top 5 most relevant chunks
+DEFAULT_TOP_K = 5  # default number of results
 ```
 
 ### Updating the Index
 
 #### Incremental Updates
 
-After adding or modifying notes, use incremental indexing to process only changed files:
+**Status:** Not yet implemented (planned for future release)
+
+After adding or modifying notes, incremental indexing will process only changed files:
 
 ```bash
-python3 indexer.py --incremental
+python3 indexer.py --incremental  # Coming soon
 ```
 
-This approach:
-- ✅ Only processes new or modified files (based on modification timestamp)
-- ✅ Significantly faster than full re-indexing
-- ✅ Keeps the database in sync with your vault
+This approach will:
+- ✅ Only process new or modified files (based on modification timestamp)
+- ✅ Be significantly faster than full re-indexing
+- ✅ Keep the database in sync with your vault
 
 #### Full Re-index
 
@@ -207,15 +259,23 @@ Use full re-indexing when:
    - `llama-index-embeddings-huggingface` - Local embedding support
    - `llama-index-vector-stores-chroma` - ChromaDB integration
    - `chromadb` - Vector database
+   - `python-dotenv` - Environment variable management
 
-2. **`indexer.py`** - Builds the vector database
+2. **`config.py`** - Shared configuration and utilities
+   - Loads environment variables from `.env`
+   - Validates configuration (vault path, HF token)
+   - Detects device (MPS for Apple Silicon, CPU otherwise)
+   - Initializes embedding model
+
+3. **`indexer.py`** - Builds the vector database
    - Loads all `.md` files from vault
    - Chunks documents intelligently
-   - Generates embeddings
+   - Generates embeddings with progress tracking
    - Stores in ChromaDB
-   - Supports incremental updates via file modification tracking
+   - Shows real-time progress bars for user feedback
+   - Supports incremental updates via file modification tracking (planned)
 
-3. **`search.py`** - CLI query interface
+4. **`search.py`** - CLI query interface
    - Accepts search query as argument
    - Loads vector database
    - Returns top-k relevant chunks as JSON
@@ -223,15 +283,18 @@ Use full re-indexing when:
 ### Indexer Pipeline
 
 1. **Parsing & Chunking (LlamaIndex):**
-   - Use `SimpleDirectoryReader` to recursively load all `.md` files
+   - Use `SimpleDirectoryReader` to recursively load all `.md` files (with progress bar: `show_progress=True`)
    - Use `SentenceSplitter` to break text into chunks (e.g., 512 tokens) with overlap, preserving sentence boundaries
 
 2. **Embedding (EmbeddingGemma):**
    - Each text chunk is passed to the local embedding model
    - The model converts text into a vector representation
+   - Progress bar shows embedding generation status
 
 3. **Storage (ChromaDB):**
    - The vector, raw text, and metadata (filepath, modification time) are saved to the persistent database
+
+**User Feedback:** Built-in progress bars (via LlamaIndex's `show_progress=True` parameter) provide real-time feedback during file loading and embedding generation.
 
 ### Technology Stack
 
