@@ -153,7 +153,8 @@ Returns JSON with the most relevant note chunks and metadata.
       "score": 0.82
     }
   ],
-  "count": 2
+  "count": 2,
+  "elapsed_time_seconds": 3.142
 }
 ```
 
@@ -344,7 +345,8 @@ The `search.py` script returns JSON in all cases:
       "score": 0.89
     }
   ],
-  "count": 2
+  "count": 2,
+  "elapsed_time_seconds": 3.142
 }
 ```
 
@@ -354,7 +356,8 @@ The `search.py` script returns JSON in all cases:
   "query": "invalid query",
   "error": "Index not found. Please run: python3 indexer.py --full",
   "results": [],
-  "count": 0
+  "count": 0,
+  "elapsed_time_seconds": 0.023
 }
 ```
 
@@ -363,7 +366,8 @@ The `search.py` script returns JSON in all cases:
 {
   "query": "nonexistent topic",
   "results": [],
-  "count": 0
+  "count": 0,
+  "elapsed_time_seconds": 2.851
 }
 ```
 

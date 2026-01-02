@@ -11,6 +11,7 @@ Usage:
 import sys
 import json
 import argparse
+import time
 from typing import Dict, Any, List
 
 from llama_index.core import VectorStoreIndex, Settings
@@ -80,8 +81,10 @@ def search_vault(query: str, top_k: int) -> Dict[str, Any]:
         top_k: Number of top results to return.
 
     Returns:
-        Dictionary containing query, results, and count.
+        Dictionary containing query, results, count, and elapsed time.
     """
+    start_time = time.time()
+
     try:
         # Step 1: Setup embedding model
         embed_model = setup_embedding_model(verbose=False)
@@ -121,21 +124,31 @@ def search_vault(query: str, top_k: int) -> Dict[str, Any]:
 
             results.append(result_item)
 
-        return {"query": query, "results": results, "count": len(results)}
+        elapsed_time = time.time() - start_time
+        return {
+            "query": query,
+            "results": results,
+            "count": len(results),
+            "elapsed_time_seconds": round(elapsed_time, 3),
+        }
 
     except FileNotFoundError:
+        elapsed_time = time.time() - start_time
         return {
             "query": query,
             "error": "Database not found. Please run: python3 indexer.py --full",
             "results": [],
             "count": 0,
+            "elapsed_time_seconds": round(elapsed_time, 3),
         }
     except Exception as e:
+        elapsed_time = time.time() - start_time
         return {
             "query": query,
             "error": f"Search error: {str(e)}",
             "results": [],
             "count": 0,
+            "elapsed_time_seconds": round(elapsed_time, 3),
         }
 
 
