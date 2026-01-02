@@ -14,7 +14,13 @@ import argparse
 from pathlib import Path
 from typing import List, Tuple
 
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings, Document
+from llama_index.core import (
+    VectorStoreIndex,
+    SimpleDirectoryReader,
+    Settings,
+    Document,
+    StorageContext,
+)
 from llama_index.vector_stores.chroma import ChromaVectorStore
 import chromadb
 
@@ -159,9 +165,12 @@ def build_index_full(vault_path: str, db_path: str) -> None:
     print("=" * 60, file=sys.stderr)
     print("Generating embeddings and building index...", file=sys.stderr)
 
+    # Create storage context
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
     index = VectorStoreIndex.from_documents(
         documents,
-        vector_store=vector_store,
+        storage_context=storage_context,
         show_progress=True,  # Built-in progress bar
     )
 

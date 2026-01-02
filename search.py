@@ -97,42 +97,32 @@ def search_vault(query: str, top_k: int) -> Dict[str, Any]:
         # Step 4: Create index from existing vector store
         index = VectorStoreIndex.from_vector_store(vector_store)
 
-        # Step 5: Create query engine
-        query_engine = index.as_query_engine(similarity_top_k=top_k)
+        # Step 5: Use retriever instead of query engine to avoid LLM requirement
+        retriever = index.as_retriever(similarity_top_k=top_k)
 
-        # Step 6: Execute query
-        response = query_engine.query(query)
+        # Step 6: Execute retrieval
+        nodes = retriever.retrieve(query)
 
         # Step 7: Format results
         results = []
-        if hasattr(response, "source_nodes"):
-            for node in response.source_nodes:
-                result_item = {
-                    "content": node.node.get_content(),
-                    "score": float(node.score) if node.score is not None else 0.0,
-                }
+        for node in nodes:
+            result_item = {
+                "content": node.node.get_content(),
+                "score": float(node.score) if node.score is not None else 0.0,
+            }
 
-                # Add source filepath if available
-                if hasattr(node.node, "metadata") and "file_path" in node.node.metadata:
-                    result_item["source"] = node.node.metadata["file_path"]
-                elif (
-                    hasattr(node.node, "metadata") and "file_name" in node.node.metadata
-                ):
-                    result_item["source"] = node.node.metadata["file_name"]
-                else:
-                    result_item["source"] = "unknown"
+            # Add source filepath if available
+            if hasattr(node.node, "metadata") and "file_path" in node.node.metadata:
+                result_item["source"] = node.node.metadata["file_path"]
+            elif hasattr(node.node, "metadata") and "file_name" in node.node.metadata:
+                result_item["source"] = node.node.metadata["file_name"]
+            else:
+                result_item["source"] = "unknown"
 
-                results.append(result_item)
+            results.append(result_item)
 
         return {"query": query, "results": results, "count": len(results)}
 
-    except chromadb.errors.InvalidCollectionException:
-        return {
-            "query": query,
-            "error": "Index not found. Please run: python3 indexer.py --full",
-            "results": [],
-            "count": 0,
-        }
     except FileNotFoundError:
         return {
             "query": query,
